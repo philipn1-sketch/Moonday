@@ -1,5 +1,6 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { PlusCard } from '../components/PlusGate';
 import { TabBar } from '../components/TabBar';
 import { Card, Screen, SecondaryButton, T } from '../components/ui';
 import { flagsFor, periodsFrom, predict, type Phase } from '../core/cycle';
@@ -15,7 +16,7 @@ import { line, radius, space, type, wash } from '../theme';
 
 /** Her own patterns: how long her cycles and periods run, how steady they are, and what she feels when. */
 export default function Insights() {
-  const { days, prediction: pr, settings } = useApp();
+  const { days, prediction: pr, settings, plus } = useApp();
   const p = usePalette();
   const { stats } = pr;
   const flags = flagsFor(pr);
@@ -38,6 +39,9 @@ export default function Insights() {
   return (
     <Screen>
       <View style={styles.head}><T style={[type.title, { fontSize: 28 }]} accessibilityRole="header">{t('Insights')}</T></View>
+      {!plus ? (
+        <View style={styles.body}><PlusCard feature="insights" /></View>
+      ) : (
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.tiles}>
           {[
@@ -104,6 +108,7 @@ export default function Insights() {
             onPress={() => shareReport(reportHtml({ name: settings.name, days, prediction: pr })).catch(() => {})} />
         </Card>
       </ScrollView>
+      )}
       <TabBar current="insights" />
     </Screen>
   );

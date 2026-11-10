@@ -7,6 +7,10 @@ import { DEFAULT_SETTINGS, type DayKey, type DayLog, type Settings } from '../co
 import * as db from '../data/db';
 import { planReminders } from '../core/reminders';
 import * as notify from '../services/notify';
+import { hasPlus } from '../core/plus';
+import { owned } from '../services/purchases';
+import { makeCode, mergeDays, sharedOf, type Vault } from '../core/sync';
+import { deleteVault, fetchVault, newCodeBytes, storeVault, vaultAvailable } from '../services/vault';
 
 export interface SnackAction {
   label: string;
@@ -28,6 +32,17 @@ interface App {
   saveDay: (date: DayKey, patch: Partial<DayLog>) => void;
   todayKey: DayKey;
   prediction: Prediction;
+  /** Moonday Plus is on: bought, or within the free week. */
+  plus: boolean;
+  /** Backup and partner sharing. */
+  sync: { state: 'off' | 'syncing' | 'ok' | 'offline'; lastOk?: number };
+  startSharing: () => Promise<string>;
+  /** Joins with a code from her phone: as her partner (view only) or as her own new phone (restore). */
+  joinFamily: (code: string, role: 'owner' | 'partner') => Promise<'joined' | 'notFound' | 'offline'>;
+  stopSharing: () => void;
+  deleteBackup: () => Promise<boolean>;
+  /** A partner's phone views her cycle but doesn't log. */
+  viewOnly: boolean;
   snack: Snack | null;
   showSnack: (message: string, actions?: SnackAction[]) => void;
   hideSnack: () => void;
@@ -36,7 +51,15 @@ interface App {
 const Ctx = createContext<App | null>(null);
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<Settings>(() => ({ ...DEFAULT_SETTINGS, ...db.loadSettings() }));
+  const [settings, setSettings] = useState<Settings>(() => {
+    const s = { ...DEFAULT_SETTINGS, ...db.loadSettings() };
+    // the free week of Plus starts the first time Moonday opens, and is saved so a restart can't restart it
+    if (!s.plus?.trialStartedAt) {
+      s.plus = { ...s.plus, trialStartedAt: Date.now() };
+      db.putSettings(s);
+    }
+    return s;
+  });
   const [days, setDays] = useState<DayLog[]>(() => db.loadDays());
   const [todayKey, setTodayKey] = useState(() => today());
   const [snack, setSnack] = useState<Snack | null>(null);
@@ -83,6 +106,102 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     notify.syncReminders(plan, settings.reminders).catch(() => {});
   }, [prediction, settings.reminders, settings.goal]);
 
+  const plus = hasPlus(settings, Date.now());
+
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+  const [syncState, setSyncState] = useState<App['sync']['state']>(settings.sync ? 'syncing' : 'off');
+  const replaceDays = useCallback((next: DayLog[]) => {
+    for (const d of next) db.putDay(d);
+    daysRef.current = next;
+    setDays(next);
+  }, []);
+
+  /** Fetch, merge, and (on her own phone) send back. Safe to call often; a newer backup always wins day by day. */
+  const syncNow = useCallback(async () => {
+    const s = settingsRef.current;
+    if (!s.sync || !vaultAvailable) return;
+    setSyncState('syncing');
+    try {
+      const remote = await fetchVault(s.sync.code);
+      const merged = mergeDays(daysRef.current, remote?.days ?? []);
+      replaceDays(merged);
+      if (s.sync.role === 'partner') {
+        if (remote) updateSettings({ ...remote.shared });
+      } else {
+        await storeVault(s.sync.code, { version: 1, days: merged, shared: sharedOf(s), sharedAt: Date.now() });
+      }
+      updateSettings({ sync: { ...s.sync, lastOk: Date.now() } });
+      setSyncState('ok');
+    } catch {
+      setSyncState('offline');
+    }
+  }, [replaceDays, updateSettings]);
+
+  // on opening, on coming back, and a moment after she logs something
+  useEffect(() => {
+    syncNow();
+    const sub = RNAppState.addEventListener('change', (st) => st === 'active' && syncNow());
+    return () => sub.remove();
+  }, [syncNow]);
+  useEffect(() => {
+    if (!settings.sync || settings.sync.role === 'partner') return;
+    const timer = setTimeout(syncNow, 2_000);
+    return () => clearTimeout(timer);
+  }, [days, settings.name, settings.goal, settings.usualCycle, settings.usualPeriod, settings.pregnancyStart, syncNow, settings.sync]);
+
+  const startSharing = useCallback(async () => {
+    const code = makeCode(newCodeBytes());
+    const s = settingsRef.current;
+    const v: Vault = { version: 1, days: daysRef.current, shared: sharedOf(s), sharedAt: Date.now() };
+    await storeVault(code, v);
+    updateSettings({ sync: { code, role: 'owner', lastOk: Date.now() } });
+    setSyncState('ok');
+    return code;
+  }, [updateSettings]);
+
+  const joinFamily = useCallback(async (code: string, role: 'owner' | 'partner') => {
+    try {
+      const remote = await fetchVault(code);
+      if (!remote) return 'notFound' as const;
+      replaceDays(mergeDays(daysRef.current, remote.days));
+      updateSettings({ ...remote.shared, onboarded: true, sync: { code, role, lastOk: Date.now() } });
+      setSyncState('ok');
+      return 'joined' as const;
+    } catch {
+      return 'offline' as const;
+    }
+  }, [replaceDays, updateSettings]);
+
+  const stopSharing = useCallback(() => {
+    updateSettings({ sync: undefined });
+    setSyncState('off');
+  }, [updateSettings]);
+
+  const deleteBackup = useCallback(async () => {
+    const s = settingsRef.current;
+    if (!s.sync) return false;
+    const gone = await deleteVault(s.sync.code);
+    stopSharing();
+    return gone;
+  }, [stopSharing]);
+
+  // what this Apple ID owns, checked whenever Moonday opens: a cancelled subscription ends, a restore comes back
+  useEffect(() => {
+    const check = () =>
+      owned()
+        .then((o) => setSettings((s) => {
+          if ((s.plus?.owned ?? null) === o || (s.plus?.owned === 'lifetime' && o === null)) return s;
+          const next = { ...s, plus: { ...s.plus, owned: o ?? undefined } };
+          db.putSettings(next);
+          return next;
+        }))
+        .catch(() => {});
+    check();
+    const sub = RNAppState.addEventListener('change', (st) => st === 'active' && check());
+    return () => sub.remove();
+  }, []);
+
   const showSnack = useCallback((message: string, actions: SnackAction[] = []) => {
     snackId.current += 1;
     setSnack({ id: snackId.current, message, actions });
@@ -90,8 +209,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const hideSnack = useCallback(() => setSnack(null), []);
 
   const value = useMemo<App>(
-    () => ({ settings, updateSettings, days, dayLog, saveDay, todayKey, prediction, snack, showSnack, hideSnack }),
-    [settings, updateSettings, days, dayLog, saveDay, todayKey, prediction, snack, showSnack, hideSnack],
+    () => ({
+      settings, updateSettings, days, dayLog, saveDay, todayKey, prediction, plus, snack, showSnack, hideSnack,
+      sync: { state: syncState, lastOk: settings.sync?.lastOk }, startSharing, joinFamily, stopSharing, deleteBackup,
+      viewOnly: settings.sync?.role === 'partner',
+    }),
+    [settings, updateSettings, days, dayLog, saveDay, todayKey, prediction, plus, snack, showSnack, hideSnack, syncState, startSharing, joinFamily, stopSharing, deleteBackup],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

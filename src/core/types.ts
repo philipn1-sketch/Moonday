@@ -46,6 +46,22 @@ export interface Settings {
   reminders: Reminders;
   /** Asks for Face ID or the phone's passcode whenever Moonday opens. */
   lock: boolean;
+  plus?: PlusState;
+  /** Backup and partner sharing, when on. The code never leaves her phones except inside a share she sends. */
+  sync?: SyncState;
+}
+
+export interface SyncState {
+  code: string;
+  /** Her own phone logs; a partner's phone only views. */
+  role: 'owner' | 'partner';
+  lastOk?: number;
+}
+
+export interface PlusState {
+  /** When her free week started: the first time the app opened. */
+  trialStartedAt?: number;
+  owned?: 'monthly' | 'lifetime';
 }
 
 /** A time of day, in minutes after midnight. */

@@ -5,7 +5,10 @@ import { MonthPicker } from '../components/MonthPicker';
 import { Stepper } from '../components/Stepper';
 import { TabBar } from '../components/TabBar';
 import { Toggle } from '../components/Toggle';
+import { router } from 'expo-router';
+
 import { Card, Choice, Screen, T } from '../components/ui';
+import { plusStatus } from '../core/plus';
 import { dateOf } from '../core/days';
 import type { ClockMinutes, Goal, Reminders, Settings as S, ThemeChoice } from '../core/types';
 import { canLock, unlock } from '../services/lock';
@@ -91,6 +94,24 @@ export default function Settings() {
           </Card>
         )}
 
+        <Pressable onPress={() => router.push('/sharing')} accessibilityRole="button" testID="open-sharing"
+          style={({ pressed }) => [styles.plusRow, { backgroundColor: p.surface, opacity: pressed ? 0.85 : 1 }]}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <T style={type.body}>{t('Partner and backup')}</T>
+            <T tone="muted" style={type.small}>{settings.sync ? (settings.sync.role === 'partner' ? t('Viewing as a partner') : t('On, encrypted')) : t('Off')}</T>
+          </View>
+          <T tone="muted" style={type.title}>›</T>
+        </Pressable>
+
+        <Pressable onPress={() => router.push('/plus')} accessibilityRole="button" testID="open-plus"
+          style={({ pressed }) => [styles.plusRow, { backgroundColor: p.surface, opacity: pressed ? 0.85 : 1 }]}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <T style={type.body}>{t('Moonday Plus')}</T>
+            <T tone="muted" style={type.small}>{plusStatus(settings, Date.now())}</T>
+          </View>
+          <T tone="muted" style={type.title}>›</T>
+        </Pressable>
+
         <Card style={{ gap: space.xs }}>
           <T tone="muted" style={type.label}>{t('Privacy')}</T>
           <Toggle label={t('Lock Moonday')} note={t('Face ID or your phone passcode each time it opens')} value={settings.lock} testID="lock"
@@ -124,4 +145,5 @@ const styles = StyleSheet.create({
   body: { paddingHorizontal: space.side, paddingBottom: space.xl, gap: space.l },
   field: { minHeight: TAP, borderRadius: radius.row, paddingHorizontal: space.l },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: TAP },
+  plusRow: { flexDirection: 'row', alignItems: 'center', gap: space.m, borderRadius: radius.card, paddingHorizontal: space.xl, paddingVertical: space.l },
 });

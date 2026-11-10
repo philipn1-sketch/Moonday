@@ -26,6 +26,8 @@ function Themed() {
         <Stack.Screen name="settings" />
         <Stack.Screen name="log/[date]" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="welcome" options={{ animation: 'fade', gestureEnabled: false }} />
+        <Stack.Screen name="plus" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="sharing" options={{ animation: 'slide_from_right' }} />
       </Stack>
     </>
   );

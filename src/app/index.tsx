@@ -3,12 +3,14 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { CycleDial } from '../components/CycleDial';
+import { PlusCard } from '../components/PlusGate';
 import { PregnancyView } from '../components/PregnancyView';
 import { TabBar } from '../components/TabBar';
 import { Card, PrimaryButton, Screen, SnackbarSlot, T } from '../components/ui';
 import { chanceOn, flagsFor } from '../core/cycle';
 import { addDays, dateOf, diff } from '../core/days';
 import { PHASE_NAME, PHASE_TIP } from '../core/options';
+import { isEmptyDay } from '../core/sync';
 import { t, tn } from '../i18n';
 import { useApp } from '../state/AppState';
 import { usePalette } from '../state/theme';
@@ -18,13 +20,13 @@ const weekday = (d: string) => dateOf(d).toLocaleDateString(undefined, { weekday
 
 /** Where she is in her cycle today, what comes next, and one tap to log. */
 export default function Today() {
-  const { prediction: pr, todayKey, dayLog, saveDay, showSnack, settings, days } = useApp();
+  const { prediction: pr, todayKey, dayLog, saveDay, showSnack, settings, days, plus, viewOnly } = useApp();
   const p = usePalette();
   const [area, setArea] = useState(0);
   const flags = flagsFor(pr);
   const accent = phaseColor(p, pr.phase);
   const log = dayLog(todayKey);
-  const chance = settings.goal === 'conceive' && pr.phase ? chanceOn(pr, todayKey) : null;
+  const chance = plus && settings.goal === 'conceive' && pr.phase ? chanceOn(pr, todayKey) : null;
 
   const headline = pr.phase === null
     ? t('Log your period to start')
@@ -50,7 +52,7 @@ export default function Today() {
 
   const dial = Math.min(320, Math.max(220, area - 40));
   if (!settings.onboarded && days.length === 0) return <Redirect href="/welcome" />;
-  if (settings.goal === 'pregnant' && settings.pregnancyStart) {
+  if (plus && settings.goal === 'pregnant' && settings.pregnancyStart) {
     return (
       <Screen>
         <PregnancyView start={settings.pregnancyStart} day={todayKey} name={settings.name} />
@@ -62,7 +64,7 @@ export default function Today() {
     <Screen>
       <View style={styles.top}>
         <T tone="muted" style={type.label}>{dateOf(todayKey).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}</T>
-        {settings.name ? <T style={type.title}>{t('Hi {name}', { name: settings.name })}</T> : null}
+        {settings.name ? <T style={type.title}>{viewOnly ? t("{name}'s cycle", { name: settings.name }) : t('Hi {name}', { name: settings.name })}</T> : null}
       </View>
       <ScrollView contentContainerStyle={styles.body} onLayout={(e) => setArea(e.nativeEvent.layout.width)}>
         <View style={styles.week} accessibilityLabel={t('This week')}>
@@ -70,11 +72,11 @@ export default function Today() {
             const on = d === todayKey;
             const logged = dayLog(d);
             return (
-              <Pressable key={d} onPress={() => router.push(`/log/${d}`)} style={[styles.weekDay, on && { backgroundColor: p.surface }]} accessibilityRole="button"
+              <Pressable key={d} disabled={viewOnly} onPress={() => router.push(`/log/${d}`)} style={[styles.weekDay, on && { backgroundColor: p.surface }]} accessibilityRole="button"
                 accessibilityLabel={dateOf(d).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}>
                 <T tone="muted" style={type.small}>{weekday(d)}</T>
                 <T style={[type.body, on && { fontWeight: '800' }]}>{dateOf(d).getDate()}</T>
-                <View style={[styles.weekDot, { backgroundColor: logged.flow ? p.period : Object.keys(logged).length > 1 ? p.muted : 'transparent' }]} />
+                <View style={[styles.weekDot, { backgroundColor: logged.flow ? p.period : !isEmptyDay(logged) ? p.muted : 'transparent' }]} />
               </Pressable>
             );
           })}
@@ -94,7 +96,9 @@ export default function Today() {
           </CycleDial>
         </View>
 
-        <PrimaryButton label={log.flow ? t('Remove today from period') : pr.inPeriod ? t('Log period today') : t('Log period')} onPress={togglePeriod} testID="period-today" />
+        {!viewOnly && <PrimaryButton label={log.flow ? t('Remove today from period') : pr.inPeriod ? t('Log period today') : t('Log period')} onPress={togglePeriod} testID="period-today" />}
+
+        {!plus && settings.goal !== 'track' && <PlusCard feature="modes" />}
 
         {chance && (
           <Card style={{ gap: space.xs, borderWidth: 1.5, borderColor: wash(p.fertile, '80') }} >
@@ -121,14 +125,14 @@ export default function Today() {
           </Card>
         )}
 
-        <Pressable onPress={() => router.push(`/log/${todayKey}`)} testID="log-today" accessibilityRole="button"
+        {!viewOnly && <Pressable onPress={() => router.push(`/log/${todayKey}`)} testID="log-today" accessibilityRole="button"
           style={({ pressed }) => [styles.logCard, { backgroundColor: p.surface, opacity: pressed ? 0.85 : 1 }]}>
           <View style={{ flex: 1, gap: 2 }}>
             <T style={type.title}>{t('How are you today?')}</T>
             <T tone="muted" style={type.label}>{t('Symptoms, mood, discharge, sex, tests and more')}</T>
           </View>
           <View style={[styles.plus, { backgroundColor: p.accent }]}><T tone="onAccent" style={type.title}>+</T></View>
-        </Pressable>
+        </Pressable>}
 
         {flags.length > 0 && (
           <Card style={{ gap: space.xs, borderWidth: 1.5, borderColor: wash(p.period, '80') }}>

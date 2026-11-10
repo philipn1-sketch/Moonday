@@ -6,6 +6,7 @@ import { TabBar } from '../components/TabBar';
 import { PillButton, Screen, T } from '../components/ui';
 import { periodsFrom, upcoming } from '../core/cycle';
 import { dateOf, diff, keyOf } from '../core/days';
+import { isEmptyDay } from '../core/sync';
 import type { DayKey } from '../core/types';
 import { t } from '../i18n';
 import { useApp } from '../state/AppState';
@@ -18,7 +19,7 @@ const inside = (d: DayKey, a: DayKey, b: DayKey) => diff(a, d) >= 0 && diff(d, b
 
 /** A month at a time: her logged periods, the predicted ones, the fertile window and ovulation. Tap a day to log it. */
 export default function Calendar() {
-  const { days, prediction, todayKey, dayLog } = useApp();
+  const { days, prediction, todayKey, dayLog, viewOnly } = useApp();
   const p = usePalette();
   const [month, setMonth] = useState(() => {
     const d = dateOf(todayKey);
@@ -60,11 +61,11 @@ export default function Calendar() {
             if (!d) return <View key={i} style={styles.cell} />;
             const m = markOf(d);
             const isToday = d === todayKey;
-            const logged = Object.keys(dayLog(d)).length > 1;
+            const logged = !isEmptyDay(dayLog(d));
             const fill = m === 'period' ? p.period : m === 'fertile' ? wash(p.fertile, '66') : m === 'ovulation' ? p.ovulation : 'transparent';
             const ink = m === 'period' || m === 'ovulation' ? p.onAccent : m === 'fertile' ? p.ink : p.ink;
             return (
-              <Pressable key={d} style={styles.cell} onPress={() => router.push(`/log/${d}`)} testID={`day-${d}`} accessibilityRole="button"
+              <Pressable key={d} disabled={viewOnly} style={styles.cell} onPress={() => router.push(`/log/${d}`)} testID={`day-${d}`} accessibilityRole="button"
                 accessibilityLabel={dateOf(d).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}>
                 <View style={[styles.dayCircle, {
                   backgroundColor: fill,

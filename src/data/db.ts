@@ -15,14 +15,9 @@ export function loadDays(): DayLog[] {
   return db.getAllSync<{ data: string }>('SELECT data FROM days').map((r) => JSON.parse(r.data) as DayLog);
 }
 
-/** Saves a day, or removes it when nothing is left on it. */
+/** Saves a day. A cleared day is kept as an empty entry, so clearing it reaches a shared phone too. */
 export function putDay(d: DayLog): void {
-  const { date, updatedAt: _u, ...rest } = d;
-  if (Object.values(rest).every((v) => v === undefined || (Array.isArray(v) && v.length === 0))) {
-    db.runSync('DELETE FROM days WHERE date = ?', date);
-    return;
-  }
-  db.runSync('INSERT OR REPLACE INTO days (date, data) VALUES (?, ?)', date, JSON.stringify(d));
+  db.runSync('INSERT OR REPLACE INTO days (date, data) VALUES (?, ?)', d.date, JSON.stringify(d));
 }
 
 export function loadSettings(): Partial<Settings> {

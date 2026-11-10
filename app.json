@@ -51,7 +51,8 @@
         {
           "faceIDPermission": "Moonday uses Face ID to keep your cycle private when the lock is on."
         }
-      ]
+      ],
+      "expo-iap"
     ],
     "experiments": {
       "typedRoutes": false

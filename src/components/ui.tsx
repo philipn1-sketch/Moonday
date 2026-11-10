@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
   pill: { minHeight: TAP, minWidth: TAP, borderRadius: TAP / 2, paddingHorizontal: space.l, alignItems: 'center', justifyContent: 'center' },
   topBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.side, paddingVertical: space.s, gap: space.m, minHeight: TAP + space.l },
   topSide: { minWidth: TAP },
-  topTitleBox: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 120 },
+  topTitleBox: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 96 },
   topTitle: { textAlign: 'center' },
   choice: { flexDirection: 'row', borderWidth: 1.5, borderRadius: radius.row, overflow: 'hidden' },
   choiceItem: { flex: 1, minHeight: TAP, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.m },
