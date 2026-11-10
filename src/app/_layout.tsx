@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { LockGate } from '../components/LockGate';
 import { loadFonts } from '../services/fonts';
 import { AppStateProvider } from '../state/AppState';
+import { LinkActions } from '../state/LinkActions';
 import { useThemeName } from '../state/theme';
 import { palettes } from '../theme';
 
@@ -28,6 +29,7 @@ function Themed() {
         <Stack.Screen name="welcome" options={{ animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="plus" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="sharing" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="action" options={{ animation: 'none' }} />
       </Stack>
     </>
   );
@@ -42,6 +44,7 @@ export default function RootLayout() {
         <LockGate>
           <Themed />
         </LockGate>
+        <LinkActions />
       </AppStateProvider>
     </SafeAreaProvider>
   );

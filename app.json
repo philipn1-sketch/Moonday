@@ -16,7 +16,16 @@
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSHealthShareUsageDescription": "Moonday reads period days you logged in other apps, so your predictions use them too.",
+        "NSHealthUpdateUsageDescription": "Moonday saves the period days you log to Apple Health, when you turn this on."
+      },
+      "entitlements": {
+        "com.apple.developer.healthkit": true,
+        "com.apple.developer.healthkit.access": [],
+        "com.apple.security.application-groups": [
+          "group.com.quickquotegroup.moonday"
+        ]
       }
     },
     "web": {
@@ -52,6 +61,32 @@
           "faceIDPermission": "Moonday uses Face ID to keep your cycle private when the lock is on."
         }
       ],
+      [
+        "expo-widgets",
+        {
+          "groupIdentifier": "group.com.quickquotegroup.moonday",
+          "widgets": [
+            {
+              "name": "MoondayWidget",
+              "displayName": "Moonday",
+              "description": "Your cycle day, your phase and when your next period is due.",
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium",
+                  "accessoryCircular",
+                  "accessoryRectangular",
+                  "accessoryInline"
+                ],
+                "initialLayout": "./src/widgets/MoondayWidget.tsx"
+              }
+            }
+          ],
+          "bundleIdentifier": "com.philipnader.moonday.widgets"
+        }
+      ],
+      "@bacons/apple-targets",
+      "./plugins/with-moonday-intents",
       "expo-iap"
     ],
     "experiments": {

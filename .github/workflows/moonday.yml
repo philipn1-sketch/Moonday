@@ -1,0 +1,56 @@
+# Moonday: typecheck and unit tests, then a full iPhone simulator build with the widget, Watch app and Siri shortcuts.
+name: Moonday
+
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: moonday-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - name: Unit tests in two time zones
+        run: |
+          TZ=Australia/Perth npx jest
+          TZ=America/New_York npx jest
+      - name: No dashes in app text
+        run: node scripts/check-dashes.js
+
+  ios:
+    needs: check
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - name: Generate the native iPhone project
+        run: npx expo prebuild --platform ios
+      - name: Build for the iPhone simulator
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -workspace ios/Moonday.xcworkspace -scheme Moonday -configuration Release \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO 2>&1 | tee xcodebuild.log | grep -E "error:|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" xcodebuild.log
+      - name: Show build errors
+        if: failure()
+        run: grep -B2 -A8 "error:" xcodebuild.log | head -200 || tail -150 xcodebuild.log

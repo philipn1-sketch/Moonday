@@ -11,6 +11,7 @@ import { Card, Choice, Screen, T } from '../components/ui';
 import { plusStatus } from '../core/plus';
 import { dateOf } from '../core/days';
 import type { ClockMinutes, Goal, Reminders, Settings as S, ThemeChoice } from '../core/types';
+import { healthAvailable } from '../services/health';
 import { canLock, unlock } from '../services/lock';
 import { askPermission } from '../services/notify';
 import { t, tn } from '../i18n';
@@ -20,7 +21,7 @@ import { radius, space, TAP, type } from '../theme';
 
 /** Who she is, what she tracks for, and how Moonday looks. */
 export default function Settings() {
-  const { settings, updateSettings, todayKey, prediction } = useApp();
+  const { settings, updateSettings, todayKey, prediction, connectHealth } = useApp();
   const p = usePalette();
   const [picking, setPicking] = useState(false);
   const learned = prediction.stats.cycles.length >= 3;
@@ -120,6 +121,13 @@ export default function Settings() {
               if (on && !((await canLock()) && (await unlock()))) return;
               updateSettings({ lock: on });
             }} />
+          {healthAvailable() && settings.sync?.role !== 'partner' && (
+            <Toggle label={t('Apple Health')} note={t('Save your period days to Health, and bring in ones logged elsewhere')} value={!!settings.health} testID="health"
+              onChange={async (on) => {
+                if (on) await connectHealth().catch(() => false);
+                else updateSettings({ health: false });
+              }} />
+          )}
         </Card>
 
         <Card style={{ gap: space.m }}>

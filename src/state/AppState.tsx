@@ -7,6 +7,9 @@ import { DEFAULT_SETTINGS, type DayKey, type DayLog, type Settings } from '../co
 import * as db from '../data/db';
 import { planReminders } from '../core/reminders';
 import * as notify from '../services/notify';
+import { glanceDays } from '../core/glance';
+import { shareGlance } from '../services/glance';
+import * as health from '../services/health';
 import { hasPlus } from '../core/plus';
 import { owned } from '../services/purchases';
 import { makeCode, mergeDays, sharedOf, type Vault } from '../core/sync';
@@ -41,6 +44,8 @@ interface App {
   joinFamily: (code: string, role: 'owner' | 'partner') => Promise<'joined' | 'notFound' | 'offline'>;
   stopSharing: () => void;
   deleteBackup: () => Promise<boolean>;
+  /** Turns Apple Health on: asks permission, sends her period days, and brings in ones logged elsewhere. */
+  connectHealth: () => Promise<boolean>;
   /** A partner's phone views her cycle but doesn't log. */
   viewOnly: boolean;
   snack: Snack | null;
@@ -64,6 +69,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [todayKey, setTodayKey] = useState(() => today());
   const [snack, setSnack] = useState<Snack | null>(null);
   const daysRef = useRef(days);
+  const healthOn = useRef(!!settings.health);
+  healthOn.current = !!settings.health;
   daysRef.current = days;
   const snackId = useRef(0);
 
@@ -96,6 +103,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     const rest = daysRef.current.filter((d) => d.date !== date);
     daysRef.current = [...rest, next];
     setDays(daysRef.current);
+    // a change to the flow goes to Apple Health, when she has it on
+    if (healthOn.current && (before.flow ?? null) !== (next.flow ?? null)) health.writeDay(daysRef.current, next).catch(() => {});
   }, []);
 
   const prediction = useMemo(() => predict(days, settings, todayKey), [days, settings, todayKey]);
@@ -107,6 +116,26 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }, [prediction, settings.reminders, settings.goal]);
 
   const plus = hasPlus(settings, Date.now());
+
+  // the widget, Watch and Siri follow her log
+  useEffect(() => {
+    shareGlance(glanceDays(days, settings, todayKey), plus);
+  }, [days, settings, todayKey, plus]);
+
+  // period days logged in other apps come in when Moonday opens
+  const pullHealth = useCallback(async () => {
+    if (!healthOn.current || settings.sync?.role === 'partner') return;
+    const fresh = await health.readNewDays(daysRef.current, today());
+    if (fresh.length === 0) return;
+    for (const d of fresh) db.putDay(d);
+    daysRef.current = [...daysRef.current, ...fresh];
+    setDays(daysRef.current);
+  }, [settings.sync?.role]);
+  useEffect(() => {
+    pullHealth().catch(() => {});
+    const sub = RNAppState.addEventListener('change', (st) => st === 'active' && pullHealth().catch(() => {}));
+    return () => sub.remove();
+  }, [pullHealth, settings.health]);
 
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
@@ -173,6 +202,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [replaceDays, updateSettings]);
 
+  const connectHealth = useCallback(async () => {
+    if (!(await health.connectHealth())) return false;
+    updateSettings({ health: true });
+    healthOn.current = true;
+    await health.writeAll(daysRef.current);
+    await pullHealth();
+    return true;
+  }, [updateSettings, pullHealth]);
+
   const stopSharing = useCallback(() => {
     updateSettings({ sync: undefined });
     setSyncState('off');
@@ -211,10 +249,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const value = useMemo<App>(
     () => ({
       settings, updateSettings, days, dayLog, saveDay, todayKey, prediction, plus, snack, showSnack, hideSnack,
-      sync: { state: syncState, lastOk: settings.sync?.lastOk }, startSharing, joinFamily, stopSharing, deleteBackup,
+      sync: { state: syncState, lastOk: settings.sync?.lastOk }, startSharing, joinFamily, stopSharing, deleteBackup, connectHealth,
       viewOnly: settings.sync?.role === 'partner',
     }),
-    [settings, updateSettings, days, dayLog, saveDay, todayKey, prediction, plus, snack, showSnack, hideSnack, syncState, startSharing, joinFamily, stopSharing, deleteBackup],
+    [settings, updateSettings, days, dayLog, saveDay, todayKey, prediction, plus, snack, showSnack, hideSnack, syncState, startSharing, joinFamily, stopSharing, deleteBackup, connectHealth],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -47,6 +47,8 @@ export interface Settings {
   /** Asks for Face ID or the phone's passcode whenever Moonday opens. */
   lock: boolean;
   plus?: PlusState;
+  /** Her period days are written to Apple Health, and ones logged elsewhere are read in. */
+  health?: boolean;
   /** Backup and partner sharing, when on. The code never leaves her phones except inside a share she sends. */
   sync?: SyncState;
 }
