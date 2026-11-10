@@ -5,6 +5,8 @@ import { predict, type Prediction } from '../core/cycle';
 import { today } from '../core/days';
 import { DEFAULT_SETTINGS, type DayKey, type DayLog, type Settings } from '../core/types';
 import * as db from '../data/db';
+import { planReminders } from '../core/reminders';
+import * as notify from '../services/notify';
 
 export interface SnackAction {
   label: string;
@@ -74,6 +76,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const prediction = useMemo(() => predict(days, settings, todayKey), [days, settings, todayKey]);
+
+  // reminders follow her log and settings: an early or late period moves them
+  useEffect(() => {
+    const plan = planReminders(prediction, settings.reminders, Date.now(), settings.goal === 'pregnant');
+    notify.syncReminders(plan, settings.reminders).catch(() => {});
+  }, [prediction, settings.reminders, settings.goal]);
 
   const showSnack = useCallback((message: string, actions: SnackAction[] = []) => {
     snackId.current += 1;

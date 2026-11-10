@@ -43,6 +43,27 @@ export interface Settings {
   theme: ThemeChoice;
   units: 'metric' | 'imperial';
   onboarded: boolean;
+  reminders: Reminders;
+  /** Asks for Face ID or the phone's passcode whenever Moonday opens. */
+  lock: boolean;
+}
+
+/** A time of day, in minutes after midnight. */
+export type ClockMinutes = number;
+
+export interface Reminders {
+  /** Two days before her period is due. */
+  period: boolean;
+  /** The first day of her fertile window. */
+  fertile: boolean;
+  /** Every day at this time, or null for no pill reminder. */
+  pill: ClockMinutes | null;
+  /** A nudge to log how she feels, every day at this time, or null. */
+  log: ClockMinutes | null;
+  /** When to send period and fertile reminders. */
+  at: ClockMinutes;
+  /** Lock screen wording that never mentions periods or fertility. */
+  discreet: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -53,4 +74,6 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   units: 'metric',
   onboarded: false,
+  reminders: { period: true, fertile: false, pill: null, log: null, at: 9 * 60, discreet: false },
+  lock: false,
 };

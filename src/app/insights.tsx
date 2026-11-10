@@ -1,22 +1,17 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { TabBar } from '../components/TabBar';
-import { Card, Screen, T } from '../components/ui';
-import { flagsFor, periodsFrom, predict, type Flag, type Phase } from '../core/cycle';
+import { Card, Screen, SecondaryButton, T } from '../components/ui';
+import { flagsFor, periodsFrom, predict, type Phase } from '../core/cycle';
+import { FLAG_TEXT, reportHtml } from '../core/report';
+import { shareReport } from '../services/report';
 import { diff } from '../core/days';
 import { PHASE_NAME, SYMPTOMS } from '../core/options';
-import { t, tk, tn } from '../i18n';
+import { t, tn } from '../i18n';
 import { useApp } from '../state/AppState';
 import { usePalette } from '../state/theme';
 import { line, radius, space, type, wash } from '../theme';
 
-const FLAG_TEXT: Record<Flag, string> = {
-  irregular: tk('Your cycle length changes by more than a week from cycle to cycle.'),
-  short: tk('Some cycles were shorter than 21 days.'),
-  long: tk('Some cycles were longer than 35 days.'),
-  longPeriod: tk('Some periods lasted longer than 7 days.'),
-  late: tk('Your period is a week or more late.'),
-};
 
 /** Her own patterns: how long her cycles and periods run, how steady they are, and what she feels when. */
 export default function Insights() {
@@ -105,6 +100,8 @@ export default function Insights() {
             flags.map((f) => <T key={f} tone="muted" style={type.label}>{`• ${t(FLAG_TEXT[f])}`}</T>)
           )}
           <T tone="muted" style={type.small}>{t('Moonday spots patterns but cannot diagnose. A doctor or nurse can tell you what they mean for you.')}</T>
+          <SecondaryButton strong label={t('Share a report for your doctor')} testID="share-report"
+            onPress={() => shareReport(reportHtml({ name: settings.name, days, prediction: pr })).catch(() => {})} />
         </Card>
       </ScrollView>
       <TabBar current="insights" />

@@ -12,15 +12,49 @@
       "bundleIdentifier": "com.philipnader.moonday",
       "supportsTablet": false,
       "appleTeamId": "9QLBWXC74X",
-      "config": { "usesNonExemptEncryption": false },
-      "infoPlist": { "ITSAppUsesNonExemptEncryption": false }
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
-    "web": { "output": "single", "favicon": "./assets/favicon.png" },
+    "web": {
+      "output": "single",
+      "favicon": "./assets/favicon.png"
+    },
     "plugins": [
       "expo-router",
       "expo-sqlite",
-      ["expo-localization", { "supportedLocales": { "ios": ["en", "es", "fr", "de", "it", "pt", "nl", "ja", "zh-Hans", "ko"] } }]
+      [
+        "expo-localization",
+        {
+          "supportedLocales": {
+            "ios": [
+              "en",
+              "es",
+              "fr",
+              "de",
+              "it",
+              "pt",
+              "nl",
+              "ja",
+              "zh-Hans",
+              "ko"
+            ]
+          }
+        }
+      ],
+      "expo-notifications",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Moonday uses Face ID to keep your cycle private when the lock is on."
+        }
+      ]
     ],
-    "experiments": { "typedRoutes": false }
+    "experiments": {
+      "typedRoutes": false
+    }
   }
 }

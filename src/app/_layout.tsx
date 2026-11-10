@@ -4,6 +4,7 @@ import * as SystemUI from 'expo-system-ui';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { LockGate } from '../components/LockGate';
 import { loadFonts } from '../services/fonts';
 import { AppStateProvider } from '../state/AppState';
 import { useThemeName } from '../state/theme';
@@ -36,7 +37,9 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AppStateProvider>
-        <Themed />
+        <LockGate>
+          <Themed />
+        </LockGate>
       </AppStateProvider>
     </SafeAreaProvider>
   );
