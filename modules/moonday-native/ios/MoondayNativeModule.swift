@@ -96,22 +96,22 @@ public class MoondayNativeModule: Module {
     return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
   }
 
+  // Health's flow values (the same on every iOS version): 1 unspecified, 2 light, 3 medium, 4 heavy, 5 none.
   /// Spotting is light flow in Health's terms, so it is written as light and read back as light.
   static func flowValue(_ flow: String) -> Int? {
     switch flow {
-    case "spotting", "light": return HKCategoryValueVaginalBleeding.light.rawValue
-    case "medium": return HKCategoryValueVaginalBleeding.medium.rawValue
-    case "heavy": return HKCategoryValueVaginalBleeding.heavy.rawValue
+    case "spotting", "light": return 2
+    case "medium": return 3
+    case "heavy": return 4
     default: return nil
     }
   }
 
   static func flowName(_ value: Int) -> String? {
-    switch HKCategoryValueVaginalBleeding(rawValue: value) {
-    case .light: return "light"
-    case .medium: return "medium"
-    case .heavy: return "heavy"
-    case .unspecified: return "medium"
+    switch value {
+    case 2: return "light"
+    case 1, 3: return "medium"
+    case 4: return "heavy"
     default: return nil
     }
   }
