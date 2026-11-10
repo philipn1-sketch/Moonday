@@ -1,3 +1,4 @@
+import { tk } from '../i18n';
 import { addDays, diff } from './days';
 import type { DayKey, DayLog, Settings } from './types';
 
@@ -201,3 +202,33 @@ export function pregnancyFrom(start: DayKey, day: DayKey): Pregnancy {
   const weeks = Math.floor(gone / 7);
   return { weeks, days: gone % 7, due: addDays(start, 280), trimester: weeks < 14 ? 1 : weeks < 28 ? 2 : 3, daysToGo: Math.max(0, 280 - gone) };
 }
+
+export type Chance = 'low' | 'medium' | 'high';
+
+/**
+ * How likely conception is on a day, from where it falls in her cycle: highest on ovulation day and the
+ * two days before, raised through the rest of the fertile window, low otherwise. An estimate, never a promise.
+ */
+export function chanceOn(p: Prediction, day: DayKey): Chance {
+  if (!p.ovulation || !p.fertile || p.inPeriod) return 'low';
+  const toOvulation = diff(day, p.ovulation);
+  if (toOvulation >= 0 && toOvulation <= 2) return 'high';
+  return within(day, p.fertile) ? 'medium' : 'low';
+}
+
+export interface Milestone {
+  week: number;
+  label: string;
+}
+
+/** Pregnancy milestones by week, counted the way doctors count them. */
+export const MILESTONES: Milestone[] = [
+  { week: 13, label: tk('End of the first trimester') },
+  { week: 20, label: tk('Halfway there') },
+  { week: 28, label: tk('Third trimester begins') },
+  { week: 37, label: tk('Full term from here') },
+  { week: 40, label: tk('Due date') },
+];
+
+/** The next milestone still to come, or null after the due date. */
+export const nextMilestone = (weeks: number): Milestone | null => MILESTONES.find((m) => m.week > weeks) ?? null;

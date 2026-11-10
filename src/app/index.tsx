@@ -1,11 +1,12 @@
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { CycleDial } from '../components/CycleDial';
+import { PregnancyView } from '../components/PregnancyView';
 import { TabBar } from '../components/TabBar';
 import { Card, PrimaryButton, Screen, SnackbarSlot, T } from '../components/ui';
-import { flagsFor } from '../core/cycle';
+import { chanceOn, flagsFor } from '../core/cycle';
 import { addDays, dateOf, diff } from '../core/days';
 import { PHASE_NAME, PHASE_TIP } from '../core/options';
 import { t, tn } from '../i18n';
@@ -17,12 +18,13 @@ const weekday = (d: string) => dateOf(d).toLocaleDateString(undefined, { weekday
 
 /** Where she is in her cycle today, what comes next, and one tap to log. */
 export default function Today() {
-  const { prediction: pr, todayKey, dayLog, saveDay, showSnack, settings } = useApp();
+  const { prediction: pr, todayKey, dayLog, saveDay, showSnack, settings, days } = useApp();
   const p = usePalette();
   const [area, setArea] = useState(0);
   const flags = flagsFor(pr);
   const accent = phaseColor(p, pr.phase);
   const log = dayLog(todayKey);
+  const chance = settings.goal === 'conceive' && pr.phase ? chanceOn(pr, todayKey) : null;
 
   const headline = pr.phase === null
     ? t('Log your period to start')
@@ -47,6 +49,15 @@ export default function Today() {
   };
 
   const dial = Math.min(320, Math.max(220, area - 40));
+  if (!settings.onboarded && days.length === 0) return <Redirect href="/welcome" />;
+  if (settings.goal === 'pregnant' && settings.pregnancyStart) {
+    return (
+      <Screen>
+        <PregnancyView start={settings.pregnancyStart} day={todayKey} name={settings.name} />
+        <TabBar current="today" />
+      </Screen>
+    );
+  }
   return (
     <Screen>
       <View style={styles.top}>
@@ -84,6 +95,16 @@ export default function Today() {
         </View>
 
         <PrimaryButton label={log.flow ? t('Remove today from period') : pr.inPeriod ? t('Log period today') : t('Log period')} onPress={togglePeriod} testID="period-today" />
+
+        {chance && (
+          <Card style={{ gap: space.xs, borderWidth: 1.5, borderColor: wash(p.fertile, '80') }} >
+            <T tone="muted" style={type.small}>{t('CHANCE OF CONCEIVING TODAY')}</T>
+            <T style={[type.title, { color: chance === 'low' ? p.muted : p.fertile }]} testID="chance">
+              {chance === 'high' ? t('High') : chance === 'medium' ? t('Medium') : t('Low')}
+            </T>
+            <T tone="muted" style={type.small}>{t('Ovulation tests and temperature in your log make this more accurate.')}</T>
+          </Card>
+        )}
 
         {pr.phase && (
           <Card style={{ gap: space.s }}>

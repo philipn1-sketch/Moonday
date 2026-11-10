@@ -19,7 +19,8 @@ type Options = readonly { id: string; label: string }[];
 export default function LogDay() {
   const { date } = useLocalSearchParams<{ date: string }>();
   const day = date ?? today();
-  const { dayLog, saveDay, showSnack } = useApp();
+  const { dayLog, saveDay, showSnack, settings } = useApp();
+  const imperial = settings.units === 'imperial';
   const p = usePalette();
   const [draft, setDraft] = useState<DayLog>(() => dayLog(day));
   const set = (patch: Partial<DayLog>) => setDraft((d) => ({ ...d, ...patch }));
@@ -86,8 +87,14 @@ export default function LogDay() {
           <Section title={t('Pill')}>{chips([{ id: 'yes', label: t('Taken today') }], () => !!draft.pillTaken, () => set({ pillTaken: draft.pillTaken ? undefined : true }))}</Section>
           <Section title={t('Body')}>
             <View style={{ flexDirection: 'row', gap: space.s }}>
-              {number(draft.temperature, (n) => set({ temperature: n }), '°C', 'temperature', t('Temperature'))}
-              {number(draft.weight === undefined ? undefined : draft.weight / 1000, (n) => set({ weight: n === undefined ? undefined : Math.round(n * 1000) }), 'kg', 'weight', t('Weight'))}
+              {number(
+                draft.temperature === undefined ? undefined : imperial ? Math.round((draft.temperature * 9 / 5 + 32) * 100) / 100 : draft.temperature,
+                (n) => set({ temperature: n === undefined ? undefined : imperial ? Math.round(((n - 32) * 5 / 9) * 100) / 100 : n }),
+                imperial ? '°F' : '°C', 'temperature', t('Temperature'))}
+              {number(
+                draft.weight === undefined ? undefined : Math.round((imperial ? draft.weight / 453.592 : draft.weight / 1000) * 10) / 10,
+                (n) => set({ weight: n === undefined ? undefined : Math.round(imperial ? n * 453.592 : n * 1000) }),
+                imperial ? 'lb' : 'kg', 'weight', t('Weight'))}
             </View>
             {number(draft.water, (n) => set({ water: n === undefined ? undefined : Math.round(n) }), t('glasses'), 'water', t('Water'))}
           </Section>

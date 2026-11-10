@@ -109,3 +109,26 @@ describe('pregnancy', () => {
     expect(pregnancyFrom('2026-08-01', '2026-11-07')).toEqual({ weeks: 14, days: 0, due: '2027-05-08', trimester: 2, daysToGo: 182 });
   });
 });
+
+describe('trying to conceive', () => {
+  const logs = bleed(['2026-08-04', '2026-09-01', '2026-09-29', '2026-10-27']);
+  const { chanceOn } = require('../cycle') as typeof import('../cycle');
+  it('is highest on ovulation day and the two days before', () => {
+    const p = predict(logs, USUAL, '2026-11-07');
+    expect(['2026-11-08', '2026-11-09', '2026-11-10'].map((d) => chanceOn(p, d))).toEqual(['high', 'high', 'high']);
+    expect(chanceOn(p, '2026-11-06')).toBe('medium');
+    expect(chanceOn(p, '2026-11-11')).toBe('medium');
+    expect(chanceOn(p, '2026-11-20')).toBe('low');
+  });
+  it('is low during a period', () => {
+    expect(chanceOn(predict(logs, USUAL, '2026-10-28'), '2026-10-28')).toBe('low');
+  });
+});
+
+describe('pregnancy milestones', () => {
+  const { nextMilestone } = require('../cycle') as typeof import('../cycle');
+  it('names the next one', () => {
+    expect(nextMilestone(14)?.week).toBe(20);
+    expect(nextMilestone(41)).toBeNull();
+  });
+});
