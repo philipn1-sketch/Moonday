@@ -119,7 +119,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   // the widget, Watch and Siri follow her log
   useEffect(() => {
-    shareGlance(glanceDays(days, settings, todayKey), plus);
+    shareGlance(glanceDays(days, settings, todayKey), plus, settings.lock);
   }, [days, settings, todayKey, plus]);
 
   // period days logged in other apps come in when Moonday opens

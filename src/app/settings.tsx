@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { MonthPicker } from '../components/MonthPicker';
 import { Stepper } from '../components/Stepper';
@@ -7,7 +7,8 @@ import { TabBar } from '../components/TabBar';
 import { Toggle } from '../components/Toggle';
 import { router } from 'expo-router';
 
-import { Card, Choice, Screen, T } from '../components/ui';
+import { Card, Choice, QuietButton, Screen, T } from '../components/ui';
+import { PRIVACY_URL, SUPPORT_URL } from '../config';
 import { plusStatus } from '../core/plus';
 import { dateOf } from '../core/days';
 import type { ClockMinutes, Goal, Reminders, Settings as S, ThemeChoice } from '../core/types';
@@ -139,6 +140,11 @@ export default function Settings() {
             options={[{ value: 'night', label: t('Night') }, { value: 'day', label: t('Day') }, { value: 'system', label: t('Auto') }]} />
         </Card>
 
+        <View style={styles.links}>
+          <QuietButton label={t('Help and support')} onPress={() => Linking.openURL(SUPPORT_URL)} testID="support" />
+          <QuietButton label={t('Privacy')} onPress={() => Linking.openURL(PRIVACY_URL)} testID="privacy" />
+        </View>
+
         <T tone="muted" style={[type.small, { textAlign: 'center' }]}>
           {t('Everything you log stays on this phone. Moonday is not a form of contraception or a medical device.')}
         </T>
@@ -153,5 +159,6 @@ const styles = StyleSheet.create({
   body: { paddingHorizontal: space.side, paddingBottom: space.xl, gap: space.l },
   field: { minHeight: TAP, borderRadius: radius.row, paddingHorizontal: space.l },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: TAP },
+  links: { flexDirection: 'row', justifyContent: 'center', gap: space.l },
   plusRow: { flexDirection: 'row', alignItems: 'center', gap: space.m, borderRadius: radius.card, paddingHorizontal: space.xl, paddingVertical: space.l },
 });

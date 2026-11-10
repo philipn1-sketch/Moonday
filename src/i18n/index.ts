@@ -11,7 +11,7 @@ import pt from './locales/pt';
 import zh from './locales/zh';
 
 /**
- * Nuzzle in the phone's own language. Text is written in English in the code and looked up by its
+ * Moonday in the phone's own language. Text is written in English in the code and looked up by its
  * English wording, so anything not translated yet shows in English rather than as a key.
  */
 export type Dictionary = Record<string, string>;
@@ -44,10 +44,10 @@ function phoneLanguage(): string {
 let language = phoneLanguage();
 let dict: Dictionary | null = DICTIONARIES[language] ?? null;
 
-/** The language Nuzzle is showing, such as "fr". */
+/** The language Moonday is showing, such as "fr". */
 export const currentLanguage = (): string => language;
 
-/** For tests: show Nuzzle in another language. */
+/** For tests: show Moonday in another language. */
 export function setLanguageForTests(lang: string): void {
   language = lang;
   dict = DICTIONARIES[lang] ?? null;
@@ -56,7 +56,7 @@ export function setLanguageForTests(lang: string): void {
 const fill = (s: string, vars?: Record<string, string | number>) =>
   vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : s;
 
-/** Translate English text, filling {placeholders}: t('Next feed {time}', { time }). */
+/** Translate English text, filling {placeholders}: t('Period in {n} days', { n }). */
 export function t(english: string, vars?: Record<string, string | number>): string {
   return fill(dict?.[english] ?? english, vars);
 }
@@ -75,7 +75,7 @@ function isOne(n: number): boolean {
   }
 }
 
-/** Singular or plural by the language's own rule; {n} is filled in: tn('{n} feed', '{n} feeds', 3). */
+/** Singular or plural by the language's own rule; {n} is filled in: tn('{n} day', '{n} days', 3). */
 export function tn(one: string, other: string, n: number, vars?: Record<string, string | number>): string {
   return t(isOne(n) ? one : other, { n, ...vars });
 }
